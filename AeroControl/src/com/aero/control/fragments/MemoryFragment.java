@@ -1,5 +1,6 @@
 package com.aero.control.fragments;
 
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -7,6 +8,7 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.SystemProperties;
 import android.preference.CheckBoxPreference;
 import android.preference.EditTextPreference;
 import android.preference.ListPreference;
@@ -45,7 +47,6 @@ public class MemoryFragment extends PreferenceFragment {
     public static final String CMDLINE_ZACHE = "/system/bootmenu/2nd-boot/cmdline";
     public static final String WRITEBACK = "/sys/devices/virtual/misc/writeback/writeback_enabled";
     public static final String MIN_FREE = "/proc/sys/vm/extra_free_kbytes";
-    public static final String LOW_MEM = "/system/build.prop";
     public static final String FILENAME = "firstrun_trim";
     public static final String FILENAME_HIDDEN = "firstrun_hidden_feature";
     public static final String GOV_IO_PARAMETER = "/sys/devices/platform/mmci-omap-hs.0/mmc_host/mmc0/mmc0:1234/block/mmcblk0/queue/iosched/";
@@ -62,6 +63,11 @@ public class MemoryFragment extends PreferenceFragment {
 
     public static final Handler progressHandler = new Handler();
 
+    private CheckBoxPreference mLowMemoryPref;
+
+    private static final String MEMORY_SETTINGS_CATEGORY = "memory_settings";
+    private static final String FORCE_HIGHEND_GFX_PERSIST_PROP = "persist.sys.force_highendgfx";
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -71,6 +77,8 @@ public class MemoryFragment extends PreferenceFragment {
 
 
         root = this.getPreferenceScreen();
+        final PreferenceCategory memorySettingsCategory =
+                (PreferenceCategory) findPreference(MEMORY_SETTINGS_CATEGORY);
         // I don't like the following, can we simplify it?
 
         // Declare our entries;
@@ -79,7 +87,6 @@ public class MemoryFragment extends PreferenceFragment {
         final CheckBoxPreference zcache = (CheckBoxPreference)root.findPreference("zcache");
         final CheckBoxPreference writeback_control = (CheckBoxPreference)root.findPreference("writeback");
         final EditTextPreference min_free_ram = (EditTextPreference)root.findPreference("min_free");
-        final CheckBoxPreference low_mem = (CheckBoxPreference)root.findPreference("low_mem");
 
         // Swappiness:
         swappiness.setText(AeroActivity.shell.getInfo(SWAPPNIESS_FILE));
@@ -132,63 +139,13 @@ public class MemoryFragment extends PreferenceFragment {
         }
         writeback_control.setChecked(checkDynWriteback);
 
-
-        low_mem.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-            @Override
-            public boolean onPreferenceChange(Preference preference, Object o) {
-
-                String getState = null;
-                final String a =  o.toString();
-
-                AeroActivity.shell.remountSystem();
-
-
-                try {
-                    final BufferedReader br = new BufferedReader(new FileReader(LOW_MEM));
-                    try {
-                        StringBuilder sb = new StringBuilder();
-                        String line = br.readLine();
-
-                        while (line != null) {
-                            sb.append(line);
-                            sb.append('\n');
-                            line = br.readLine();
-                        }
-                        getState = sb.toString();
-
-                        if (a.equals("true")) {
-
-                            // If already on, we can bail out;
-                            if (getState.contains("ro.config.low_ram=true"))
-                                return true;
-
-                            getState = getState.replace("ro.config.low_ram=false", "ro.config.low_ram=true");
-
-                        }
-                        else if (a.equals("false")) {
-
-                            // bail out again, because its already how we want it;
-                            if (getState.contains("ro.config.low_ram=false"))
-                                return true;
-
-                            getState = getState.replace("ro.config.low_ram=true", "ro.config.low_ram=false");
-
-                        }
-
-                    } catch (IOException e) {
-
-                    }
-                } catch (FileNotFoundException e) {
-
-                }
-
-                // Set current State to path;
-                AeroActivity.shell.setRootInfo(getState, LOW_MEM);
-                Toast.makeText(getActivity(), R.string.need_reboot, Toast.LENGTH_LONG).show();
-
-                return true;
-            };
-        });
+        if(android.os.Build.VERSION.SDK_INT >= 19) {
+            mLowMemoryPref = (CheckBoxPreference)root.findPreference("low_mem");
+            String forceHighendGfx = SystemProperties.get(FORCE_HIGHEND_GFX_PERSIST_PROP, "false");
+            mLowMemoryPref.setChecked(!"true".equals(forceHighendGfx));
+        } else {
+            memorySettingsCategory.removePreference(findPreference("low_mem"));
+        }
 
         writeback_control.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
             @Override
@@ -461,6 +418,22 @@ public class MemoryFragment extends PreferenceFragment {
             DrawFirstStart(R.string.showcase_memory_fragment_trim, R.string.showcase_memory_fragment_trim_sum, FILENAME);
 
     }
+
+    @Override
+    public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
+        if(preference == mLowMemoryPref) {
+            boolean value = !mLowMemoryPref.isChecked();
+            boolean forceHighendGfx = SystemProperties.getBoolean(FORCE_HIGHEND_GFX_PERSIST_PROP, false);
+            if (forceHighendGfx == value) return true;
+            SystemProperties.set(FORCE_HIGHEND_GFX_PERSIST_PROP, value ? "true" : "false");
+            Toast.makeText(getActivity(), R.string.need_reboot, Toast.LENGTH_LONG).show();
+        } else {
+            return super.onPreferenceTreeClick(preferenceScreen, preference);
+        }
+        return true;
+    }
+
+
 
     public void DrawFirstStart(int header, int content, String filename) {
 
