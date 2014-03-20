@@ -12,38 +12,37 @@ import com.aero.control.R;
 import com.aero.control.helpers.PreferenceHandler;
 
 /**
- * Created by Alexander Christ on 05.03.14.
+ * Created by Alexander Christ on 09.03.14.
  */
-public class MemoryDalvikFragment extends PreferenceFragment {
+public class CPUHotplugFragment extends PreferenceFragment {
 
-    public MemoryDalvikFragment mMemoryDalvikFragment;
     public PreferenceScreen root;
     public PreferenceCategory PrefCat;
-    public static final String DALVIK_TWEAK = "/proc/sys/vm";
+    public static final String HOTPLUG_PATH = "/sys/kernel/hotplug_control";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // Load the preferences from an XML resource
-        addPreferencesFromResource(R.layout.dalvik_fragment);
+        addPreferencesFromResource(R.layout.cpu_hotplug_fragment);
         root = this.getPreferenceScreen();
         TextView mActionBarTitle = (TextView) getActivity().findViewById(getResources().getIdentifier("action_bar_title", "id", "android"));
-        mActionBarTitle.setText(R.string.pref_dalvik_setttings);
+        mActionBarTitle.setText(R.string.perf_cpu_hotplug_driver);
 
         // Load our custom preferences;
-        loadDalvik();
+        loadHotplug();
     }
 
-    public void loadDalvik() {
+    public void loadHotplug() {
 
-        String completeParamterList[] = AeroActivity.shell.getDirInfo(DALVIK_TWEAK, true);
+        String completeParamterList[] = AeroActivity.shell.getDirInfo(HOTPLUG_PATH, true);
 
         // If there are already some entries, kill them all (with fire)
         if (PrefCat != null)
             root.removePreference(PrefCat);
 
         PrefCat = new PreferenceCategory(getActivity());
-        PrefCat.setTitle(R.string.pref_dalvik_setttings_heading);
+        PrefCat.setTitle(R.string.perf_cpu_hotplug);
         root.addPreference(PrefCat);
 
         try {
@@ -51,7 +50,7 @@ public class MemoryDalvikFragment extends PreferenceFragment {
             PreferenceHandler h = new PreferenceHandler(getActivity(), PrefCat, getPreferenceManager());
 
             for (String b : completeParamterList)
-                h.generateSettings(b, DALVIK_TWEAK);
+                h.generateSettings(b, HOTPLUG_PATH);
 
         } catch (NullPointerException e) {
             Log.e("Aero", "I couldn't get any files!", e);

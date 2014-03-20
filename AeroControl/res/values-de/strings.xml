@@ -19,9 +19,12 @@
     <string name="nothing_added_yet">Whoop! Du hast bis jetzt keine Profile hinzugefügt.</string>
     <string name="not_rooted">Kein Rootzugriff?</string>
     <string name="apply">Anwenden</string>
+    <string name="refresh">Neuladen</string>
+    <string name="reload">Zurücksetzen</string>
     <string name="legal">Rechtliche Hinweise</string>
     <string name="send_email">Sende eine Email</string>
     <string name="nocpu_data">Konnte keine CPU Daten finden.</string>
+    <string name="maybe_later">Vielleicht später</string>
 
 
     <!-- Default Navigation Drawer entries -->
@@ -92,6 +95,10 @@
     <string name="pref_gov_set">Governor spezfische Einstellungen</string>
     <string name="pref_gov_set_sum">Setzt Governor spezfische Einstellungen</string>
 
+    <string name="perf_cpu_hotplug">Hotplug Einstellungen</string>
+    <string name="perf_cpu_hotplug_driver">Hotplug Treiber</string>
+    <string name="perf_cpu_hotplug_sum">Stelle hier den Hotplug-Treiber ein</string>
+
     <!-- Memory Fragment -->
     <string name="pref_memory_settings">Speichereinstellungen</string>
 
@@ -117,6 +124,7 @@
     <string name="fstrim_content">Mit Trim lassen sich Partition trimmen, um die Performance zu erhöhen. Das kann eine Weile dauern.</string>
 
     <string name="pref_dalvik_setttings">VM Einstellungen</string>
+    <string name="pref_dalvik_setttings_heading">Virtuelle Maschine</string>
     <string name="pref_dalvik_setttings_sum">Ändere hier Einstellungen der virtuellen Maschine.</string>
 
     <string name="has_journal_dialog_header">Problem gefunden</string>
@@ -167,6 +175,9 @@
     <string name="restore_from_backup">Möchtest Du folgendes Backup wiederherstellen </string>
     <string name="proceed_backup">Fortfahren mit Backup? Das wird deinen momentanen Kernel sichern.</string>
 
+    <!-- Statistics Fragment -->
+    <string name="proceed_with_reset">Forfahren?</string>
+    <string name="delete_statistics">Deine momentane Statistik wird zurückgesetzt wie als hättest du dein Gerät neugestartet.</string>
 
     <!-- Showcase Strings -->
     <string name="showcase_aero_fragment">Willkommen bei Aero Control!</string>
