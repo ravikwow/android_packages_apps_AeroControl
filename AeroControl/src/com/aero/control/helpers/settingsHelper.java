@@ -39,12 +39,16 @@ public class settingsHelper {
     public static final String PREF_GPU_CONTROL_ACTIVE = "gpu_control_enable";
     public static final String PREF_DISPLAY_COLOR = "display_control";
     public static final String PREF_SWEEP2WAKE = "sweeptowake";
+    public static final String PERF_COLOR_CONTROL = "/sys/devices/platform/kcal_ctrl.0/kcal";
 
     public static final String PREF_GOV_IO_FILE = "io_scheduler";
-    public static final String PREF_SWAPPINESS_FILE = "swappiness";
     public static final String PREF_DYANMIC_FSYNC = "dynFsync";
     public static final String PREF_WRITEBACK = "writeback";
-    public static final String PREF_MIN_FREE = "min_free";
+
+    public static final String PREF_HOTPLUG = "/sys/kernel/hotplug_control";
+    public static final String PREF_GPU_GOV = "/sys/module/msm_kgsl_core/parameters";
+
+    public static final String MISC_SETTINGS_PATH = "/sys/devices/virtual/timed_output/vibrator/vtg_level";
 
     private SharedPreferences prefs;
     public static final int mNumCpus = Runtime.getRuntime().availableProcessors();
@@ -86,9 +90,8 @@ public class settingsHelper {
         try {
             HashSet<String> hashcpu_cmd = (HashSet<String>) prefs.getStringSet(PREF_CPU_COMMANDS, null);
             if (hashcpu_cmd != null) {
-                for (String cmd : hashcpu_cmd) {
+                for (String cmd : hashcpu_cmd)
                     al.add(cmd);
-                }
             }
         } catch (ClassCastException e) {
             // HashSet didn't work, so we make a fallback;
@@ -97,9 +100,8 @@ public class settingsHelper {
             if (cpu_cmd != null) {
                 // Since we can't cast to hashmap, little workaround;
                 String[] array = cpu_cmd.substring(1, cpu_cmd.length() - 1).split(",");
-                for (String cmd : array) {
+                for (String cmd : array)
                     al.add(cmd);
-                }
             }
         }
 
@@ -108,22 +110,21 @@ public class settingsHelper {
         String display_color = prefs.getString(PREF_DISPLAY_COLOR, null);
         Boolean gpu_enb = prefs.getBoolean(PREF_GPU_CONTROL_ACTIVE, false);
         Boolean sweep = prefs.getBoolean(PREF_SWEEP2WAKE, false);
+        String rgbValues = prefs.getString("rgbValues", null);
         // GET MEM VALUES FROM PREFERENCES
         String mem_ios = prefs.getString(PREF_GOV_IO_FILE, null);
-        String mem_swp = prefs.getString(PREF_SWAPPINESS_FILE, null);
         Boolean mem_dfs = prefs.getBoolean(PREF_DYANMIC_FSYNC, false);
         Boolean mem_wrb = prefs.getBoolean(PREF_WRITEBACK, false);
-        String mem_min = prefs.getString(PREF_MIN_FREE, null);
+        // Get Misc Settings from preferences
+        String misc_vib = prefs.getString(MISC_SETTINGS_PATH, null);
 
         // ADD CPU COMMANDS TO THE ARRAY
         for (int k = 0; k < mNumCpus; k++) {
-            if (cpu_max != null) {
-                al.add("echo " + cpu_max.substring(0, cpu_max.length()-4) + "000" + " > " + CPU_BASE_PATH + k + CPU_MAX_FREQ);
-            }
+            if (cpu_max != null)
+                al.add("echo " + cpu_max + " > " + CPU_BASE_PATH + k + CPU_MAX_FREQ);
 
-            if (cpu_min != null) {
-                al.add("echo " + cpu_min.substring(0, cpu_min.length()-4) + "000" + " > " + CPU_BASE_PATH + k + CPU_MIN_FREQ);
-            }
+            if (cpu_min != null)
+                al.add("echo " + cpu_min + " > " + CPU_BASE_PATH + k + CPU_MIN_FREQ);
 
             if (cpu_gov != null) {
 
@@ -138,9 +139,8 @@ public class settingsHelper {
         }
 
         // ADD GPU COMMANDS TO THE ARRAY
-        if (gpu_max != null) {
+        if (gpu_max != null)
             al.add("echo " + gpu_max + " > " + GPU_FREQ_MAX);
-        }
 
         if(new File(GPU_CONTROL_ACTIVE).exists())
             al.add("echo " + (gpu_enb ? "1" : "0") + " > " + GPU_CONTROL_ACTIVE);
@@ -148,18 +148,23 @@ public class settingsHelper {
         if(new File(SWEEP2WAKE).exists())
             al.add("echo " + (sweep ? "1" : "0") + " > " + SWEEP2WAKE);
 
-        if (display_color != null) {
+        if (display_color != null)
             al.add("echo " + display_color + " > " + DISPLAY_COLOR);
-        }
+
+        if (rgbValues != null)
+            al.add("echo " + rgbValues + " > " + PERF_COLOR_CONTROL);
 
         // ADD MEM COMMANDS TO THE ARRAY
-        if (mem_ios != null) {
+        if (mem_ios != null)
             al.add("echo " + mem_ios + " > " + GOV_IO_FILE);
-        }
 
         al.add("echo " + (mem_dfs ? "1" : "0") + " > " + DYANMIC_FSYNC);
 
         al.add("echo " + (mem_wrb ? "1" : "0") + " > " + WRITEBACK);
+
+        // Add misc commands to array
+        if (misc_vib != null)
+            al.add("echo " + misc_vib + " > " + MISC_SETTINGS_PATH);
 
         try {
 
@@ -182,7 +187,7 @@ public class settingsHelper {
                     if (governorSetting != null) {
                         al.add("echo " + governorSetting + " > " + CPU_GOV_BASE + cpu_gov + "/" + b);
 
-                        Log.e("Aero", "Output: " + "echo " + governorSetting + " > " + CPU_GOV_BASE + cpu_gov + "/" + b);
+                        //Log.e("Aero", "Output: " + "echo " + governorSetting + " > " + CPU_GOV_BASE + cpu_gov + "/" + b);
                     }
                 }
             }
@@ -198,7 +203,37 @@ public class settingsHelper {
                 if (vmSettings != null) {
                     al.add("echo " + vmSettings + " > " + DALVIK_TWEAK + "/" + c);
 
-                    Log.e("Aero", "Output: " + "echo " + vmSettings + " > " + DALVIK_TWEAK + "/" + c);
+                    //Log.e("Aero", "Output: " + "echo " + vmSettings + " > " + DALVIK_TWEAK + "/" + c);
+                }
+            }
+
+            final String completeHotplugSettings[] = shell.getDirInfo(PREF_HOTPLUG, true);
+
+            /* Hotplug specific settings at boot */
+
+            for (String d : completeHotplugSettings) {
+
+                final String hotplugSettings = prefs.getString(PREF_HOTPLUG + "/" + d, null);
+
+                if (hotplugSettings != null) {
+                    al.add("echo " + hotplugSettings + " > " + PREF_HOTPLUG + "/" + d);
+
+                    //Log.e("Aero", "Output: " + "echo " + hotplugSettings + " > " + PREF_HOTPLUG + "/" + d);
+                }
+            }
+
+            final String completeGPUGovSettings[] = shell.getDirInfo(PREF_GPU_GOV, true);
+
+            /* GPU Governor specific settings at boot */
+
+            for (String e : completeGPUGovSettings) {
+
+                final String gpugovSettings = prefs.getString(PREF_GPU_GOV + "/" + e, null);
+
+                if (gpugovSettings != null) {
+                    al.add("echo " + gpugovSettings + " > " + PREF_GPU_GOV + "/" + e);
+
+                    //Log.e("Aero", "Output: " + "echo " + gpugovSettings + " > " + PREF_GPU_GOV + "/" + e);
                 }
             }
 

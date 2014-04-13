@@ -1,13 +1,5 @@
 package com.aero.control.fragments;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -34,6 +26,14 @@ import com.aero.control.AeroActivity;
 import com.aero.control.R;
 import com.aero.control.helpers.PreferenceHandler;
 import com.espian.showcaseview.ShowcaseView;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 
 /**
  * Created by ac on 03.10.13.
@@ -404,6 +404,9 @@ public class CPUFragment extends PreferenceFragment {
                 String a = (String) o;
                 ArrayList<String> array = new ArrayList<String>();
 
+                if (Integer.parseInt(a) < Integer.parseInt(min_frequency.getValue()))
+                    return false;
+
                 for (int k = 0; k < mNumCpus; k++) {
 
                     array.add("echo " + a + " > " + CPU_BASE_PATH + k + CPU_MAX_FREQ);
@@ -425,6 +428,9 @@ public class CPUFragment extends PreferenceFragment {
 
                 String a = (String) o;
                 ArrayList<String> array = new ArrayList<String>();
+
+                if (Integer.parseInt(a) > Integer.parseInt(max_frequency.getValue()))
+                    return false;
 
                 for (int k = 0; k < mNumCpus; k++) {
 
@@ -512,7 +518,7 @@ public class CPUFragment extends PreferenceFragment {
                     final PreferenceHandler h = new PreferenceHandler(getActivity(), PrefCat, getPreferenceManager());
 
                     for (String b : completeParamterList)
-                        h.generateSettings(b, complete_path);
+                        h.generateSettings(b, complete_path, false);
 
                     // Probably the wrong place, should be in getDirInfo ?
                 } catch (NullPointerException e) {

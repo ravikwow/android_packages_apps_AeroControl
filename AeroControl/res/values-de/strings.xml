@@ -25,7 +25,7 @@
     <string name="send_email">Sende eine Email</string>
     <string name="nocpu_data">Konnte keine CPU Daten finden.</string>
     <string name="maybe_later">Vielleicht später</string>
-
+    <string name="successful">Erfolg!</string>
 
     <!-- Default Navigation Drawer entries -->
 
@@ -37,6 +37,7 @@
     <string name="slider_updater">Updater</string>
     <string name="slider_profile">Profile</string>
     <string name="slider_statistics">CPU Statistik</string>
+    <string name="slider_misc_settings">Misc Einstellungen</string>
 
     <!-- Overview Elements -->
 
@@ -181,7 +182,7 @@
 
     <!-- Statistics Fragment -->
     <string name="proceed_with_reset">Forfahren?</string>
-    <string name="delete_statistics">Deine momentane Statistik wird zurückgesetzt wie als hättest du dein Gerät neugestartet.</string>
+    <string name="delete_statistics">Deine momentane Statistik wird zurückgesetzt so als hättest du dein Gerät neugestartet.</string>
 
     <!-- Showcase Strings -->
     <string name="showcase_aero_fragment">Willkommen bei Aero Control!</string>
@@ -225,10 +226,15 @@
     <string name="pref_charge_led_mode_rgb">Gemischte LED (rot/grün)</string>
     <string name="pref_charge_led_mode_off">Aus</string>
 
+    <!-- Misc Settings -->
+    <string name="perf_misc_settings_vib">Vibrations Kontrolle</string>
+
     <!-- Profile Fragment -->
     <string name="pref_profile_enter_name">Du musst einen Namen eingeben.</string>
     <string name="pref_profile_name_exists">Dieser name existiert bereits.</string>
     <string name="pref_profile_change_name">Ändere den Namen</string>
     <string name="pref_profile_change_name_sum">Ändere den Namen deines Profils.</string>
+    <string name="pref_profile_reset">Zurücksetzen des Standardprofils</string>
+    <string name="pref_profile_reset_sum">Dein momentanes Profil wird zurückgesetzt. So als ob du Aero Control frisch installiert hast.</string>
 
 </resources>
