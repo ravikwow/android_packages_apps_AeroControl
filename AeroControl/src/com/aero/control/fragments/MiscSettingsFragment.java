@@ -1,28 +1,23 @@
 package com.aero.control.fragments;
 
 import android.os.Bundle;
-import android.os.Vibrator;
-import android.preference.Preference;
 import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceScreen;
 import android.util.Log;
-import android.widget.TextView;
 
-import com.aero.control.AeroActivity;
 import com.aero.control.R;
 import com.aero.control.helpers.PreferenceHandler;
-
-import java.util.Objects;
 
 /**
  * Created by Alexander Christ on 03.04.14.
  */
 public class MiscSettingsFragment extends PreferenceFragment {
 
-    public PreferenceScreen root;
-    public PreferenceCategory PrefCat;
-    public static final String MISC_SETTINGS_PATH = "/sys/devices/virtual/timed_output/vibrator";
+    private PreferenceScreen root;
+    private PreferenceCategory PrefCat;
+    private static final String MISC_VIBRATOR_CONTROL = "/sys/devices/virtual/timed_output/vibrator";
+    private static final String MISC_THERMAL_CONTROL = "/sys/module/msm_thermal/parameters";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -42,14 +37,18 @@ public class MiscSettingsFragment extends PreferenceFragment {
             root.removePreference(PrefCat);
 
         PrefCat = new PreferenceCategory(getActivity());
-        PrefCat.setTitle(R.string.perf_misc_settings_vib);
+        PrefCat.setTitle(R.string.pref_misc_settings);
         root.addPreference(PrefCat);
 
         try {
 
             PreferenceHandler h = new PreferenceHandler(getActivity(), PrefCat, getPreferenceManager());
 
-            h.generateSettings("vtg_level", MISC_SETTINGS_PATH, true);
+            String[][] array = new String[][] {
+                    {"vtg_level", MISC_VIBRATOR_CONTROL},
+                    {"temp_threshold", MISC_THERMAL_CONTROL}
+            };
+            h.genPrefFromFiles(array);
 
         } catch (NullPointerException e) {
             Log.e("Aero", "I couldn't get any files!", e);

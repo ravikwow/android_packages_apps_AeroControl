@@ -112,6 +112,26 @@ public class CPUFragment extends PreferenceFragment {
             cpuCategory.removePreference(cpu_hotplug);
         }
 
+        final Preference voltage_control = root.findPreference("undervolt_control");
+        if (new File("/sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table").exists()) {
+            voltage_control.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+                @Override
+                public boolean onPreferenceClick(Preference preference) {
+                    getFragmentManager()
+                            .beginTransaction()
+                            .setCustomAnimations(android.R.animator.fade_in, android.R.animator.fade_out)
+                            .replace(R.id.content_frame, new VoltageFragment())
+                            .addToBackStack("Voltage")
+                            .commit();
+
+                    return true;
+                }
+            });
+        } else {
+            cpuCategory.removePreference(voltage_control);
+        }
+
+
         final Preference cpu_oc_uc = (Preference) root.findPreference("cpu_oc_uc");
 
         if (AeroActivity.shell.getInfo(CPU_VSEL).equals("Unavailable")) {
@@ -377,7 +397,7 @@ public class CPUFragment extends PreferenceFragment {
                          * and therefore we sleep for a short interval;
                          */
                 try {
-                    Thread.sleep(350);
+                    Thread.sleep(450);
                 } catch (InterruptedException e) {
                     Log.e("Aero", "Something interrupted the main Thread, try again.", e);
                 }
@@ -404,11 +424,16 @@ public class CPUFragment extends PreferenceFragment {
                 String a = (String) o;
                 ArrayList<String> array = new ArrayList<String>();
 
-                if (Integer.parseInt(a) < Integer.parseInt(min_frequency.getValue()))
+                try {
+                    if (Integer.parseInt(a) < Integer.parseInt(min_frequency.getValue()))
+                        return false;
+                } catch (NumberFormatException e) {
                     return false;
+                }
 
                 for (int k = 0; k < mNumCpus; k++) {
 
+                    array.add("echo 1 > " + CPU_BASE_PATH + k + "/online");
                     array.add("echo " + a + " > " + CPU_BASE_PATH + k + CPU_MAX_FREQ);
 
                     //** store preferences
@@ -429,11 +454,16 @@ public class CPUFragment extends PreferenceFragment {
                 String a = (String) o;
                 ArrayList<String> array = new ArrayList<String>();
 
-                if (Integer.parseInt(a) > Integer.parseInt(max_frequency.getValue()))
+                try {
+                    if (Integer.parseInt(a) > Integer.parseInt(max_frequency.getValue()))
+                        return false;
+                } catch (NumberFormatException e) {
                     return false;
+                }
 
                 for (int k = 0; k < mNumCpus; k++) {
 
+                    array.add("echo 1 > " + CPU_BASE_PATH + k + "/online");
                     array.add("echo " + a + " > " + CPU_BASE_PATH + k + CPU_MIN_FREQ);
 
                     //** store preferences
@@ -503,22 +533,21 @@ public class CPUFragment extends PreferenceFragment {
                      */
 
                     for (String b : completeParamterList) {
-                        al.add("chmod 644 " + complete_path + "/" + b);
+                        al.add("chmod 0666 " + complete_path + "/" + b);
                         al.add("chown system:root " + complete_path + "/" + b);
                     }
                     String[] commands = al.toArray(new String[0]);
                     AeroActivity.shell.setRootInfo(commands);
 
                     try {
-                        Thread.sleep(100);
+                        Thread.sleep(200);
                     } catch (InterruptedException e) {
                         Log.e("Aero", "Something interrupted the main Thread, try again.", e);
                     }
 
                     final PreferenceHandler h = new PreferenceHandler(getActivity(), PrefCat, getPreferenceManager());
 
-                    for (String b : completeParamterList)
-                        h.generateSettings(b, complete_path, false);
+                    h.genPrefFromDictionary(completeParamterList, complete_path);
 
                     // Probably the wrong place, should be in getDirInfo ?
                 } catch (NullPointerException e) {

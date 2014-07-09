@@ -16,6 +16,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.SeekBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.aero.control.AeroActivity;
@@ -27,12 +28,13 @@ import java.io.File;
  */
 public class GPUFragment extends PreferenceFragment {
 
-    public static final String GPU_FREQ_MAX = "/sys/kernel/gpu_control/max_freq";
     public static final String GPU_CONTROL_ACTIVE = "/sys/kernel/gpu_control/gpu_control_active";
     public static final String GPU_FREQ_CUR = "/proc/gpu/cur_rate";
     public static final String DISPLAY_COLOR ="/sys/class/misc/display_control/display_brightness_value";
-    public static final String GPU_FREQ_NEXUS4 = "/sys/class/kgsl/kgsl-3d0/max_gpuclk";
     public static final String GPU_FREQ_NEXUS4_VALUES = "/sys/class/kgsl/kgsl-3d0/gpu_available_frequencies";
+    public static final String[] GPU_FILES = {"/sys/kernel/gpu_control/max_freq", /* Defy 2.6 Kernel */
+                                            "/sys/class/kgsl/kgsl-3d0/max_gpuclk", /* Adreno GPUs */
+                                            "/sys/devices/platform/omap/pvrsrvkm.0/sgx_fck_rate" /* Defy 3.0 Kernel */};
     public static final String SWEEP2WAKE = "/sys/android_touch/sweep2wake";
     public static final String COLOR_CONTROL = "/sys/devices/platform/kcal_ctrl.0/kcal";
     public boolean checkGpuControl;
@@ -60,23 +62,25 @@ public class GPUFragment extends PreferenceFragment {
         final ListPreference display_control = (ListPreference)root.findPreference("display_control");
         final Preference color_control = root.findPreference("display_color_control");
 
+        /* Find correct gpu path */
+        for (String a : GPU_FILES) {
+            if (new File(a).exists()) {
+                gpu_file = a;
+                break;
+            }
+        }
+
         if(!(new File(SWEEP2WAKE).exists()))
             gpuCategory.removePreference(sweep2wake);
 
         if(!(new File(GPU_CONTROL_ACTIVE).exists()))
                 gpuCategory.removePreference(gpu_control_enable);
 
-        if (!(new File(GPU_FREQ_MAX).exists() || new File(GPU_FREQ_NEXUS4).exists()))
+        if (gpu_file == null)
             gpuCategory.removePreference(gpu_control_frequencies);
 
         if (!(new File(COLOR_CONTROL).exists()))
             gpuCategory.removePreference(color_control);
-
-        // Check for nexus;
-        if (new File(GPU_FREQ_NEXUS4).exists())
-            gpu_file = GPU_FREQ_NEXUS4;
-        else
-            gpu_file = GPU_FREQ_MAX;
 
         if (AeroActivity.shell.getInfo(DISPLAY_COLOR).equals("Unavailable"))
             gpuCategory.removePreference(display_control);
@@ -111,7 +115,7 @@ public class GPUFragment extends PreferenceFragment {
         display_control.setEntryValues(display_values);
 
         // Just throw in our frequencies;
-        if (gpu_file.equals(GPU_FREQ_NEXUS4)) {
+        if (new File(GPU_FREQ_NEXUS4_VALUES).exists()) {
             gpu_control_frequencies.setEntries(AeroActivity.shell.getInfoArray(GPU_FREQ_NEXUS4_VALUES, 1, 0));
             gpu_control_frequencies.setEntryValues(AeroActivity.shell.getInfoArray(GPU_FREQ_NEXUS4_VALUES, 0, 0));
         } else {
@@ -120,9 +124,12 @@ public class GPUFragment extends PreferenceFragment {
         }
 
         try  {
-            gpu_control_frequencies.setValue(AeroActivity.shell.getInfoArray(gpu_file, 0, 0)[0]);
-            gpu_control_frequencies.setSummary(AeroActivity.shell.toMHz((AeroActivity.shell.getInfoArray(gpu_file, 0, 0)[0].substring(0,
-                    AeroActivity.shell.getInfoArray(gpu_file, 0, 0)[0].length() - 3))));
+
+            if (gpu_file != null) {
+                gpu_control_frequencies.setValue(AeroActivity.shell.getInfoArray(gpu_file, 0, 0)[0]);
+                gpu_control_frequencies.setSummary(AeroActivity.shell.toMHz((AeroActivity.shell.getInfoArray(gpu_file, 0, 0)[0].substring(0,
+                        AeroActivity.shell.getInfoArray(gpu_file, 0, 0)[0].length() - 3))));
+            }
 
             // Check if enabled or not;
             if (AeroActivity.shell.getInfo(GPU_CONTROL_ACTIVE).equals("1"))
@@ -337,5 +344,10 @@ public class GPUFragment extends PreferenceFragment {
                 return false;
             }
         });
+
+        if (!(gpuCategory.getPreferenceCount() > 0)) {
+            gpuCategory.setTitle(R.string.nogpu_data);
+        }
+
     }
 }

@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,14 +37,14 @@ public class AeroFragment extends Fragment {
     // Values to read from;
     public static final String GOV_FILE = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor";
     public static final String GOV_IO_FILE = "/sys/block/mmcblk0/queue/scheduler";
-    public static final String GPU_FREQ = "/proc/gpu/cur_rate";
-    public static final String GPU_FREQ_NEXUS4 = "/sys/class/kgsl/kgsl-3d0/gpuclk";
+    public static final String[] GPU_FILES = {"/sys/class/kgsl/kgsl-3d0/gpuclk", /* Adreno GPUs */
+                                                "/sys/devices/platform/omap/pvrsrvkm.0/sgx_fck_rate" /* Defy 3.0 Kernel */,
+                                                "/proc/gpu/cur_rate" /* Defy 2.6 Kernel */};
     public static final String FILENAME_PROC_MEMINFO = "/proc/meminfo";
 
     public ListView listView1;
     public ViewGroup root;
     public AeroAdapter adapter;
-    public List<adapterInit> overview_data;
     public List<adapterInit> mOverviewData= new ArrayList<adapterInit>();
     public AeroFragment mAeroFragment;
     public ShowcaseView.ConfigOptions mConfigOptions;
@@ -128,11 +129,13 @@ public class AeroFragment extends Fragment {
 
         listView1 = (ListView) root.findViewById(R.id.listView1);
 
-        final File gpu = new File(GPU_FREQ_NEXUS4);
-        if (gpu.exists())
-            gpu_file = GPU_FREQ_NEXUS4;
-        else
-            gpu_file = GPU_FREQ;
+        /* Find correct gpu path */
+        for (String a : GPU_FILES) {
+            if (new File(a).exists()) {
+                gpu_file = a;
+                break;
+            }
+        }
 
         try {
             mRefreshThread.start();
@@ -243,6 +246,8 @@ public class AeroFragment extends Fragment {
 
     public void DrawFirstStart(int header, int content) {
 
+        int actionBarHeight = 0;
+
         try {
             final FileOutputStream fos = getActivity().openFileOutput(FILENAME, Context.MODE_PRIVATE);
             fos.write("1".getBytes());
@@ -252,7 +257,12 @@ public class AeroFragment extends Fragment {
             Log.e("Aero", "Could not save file. ", e);
         }
 
-        mShowCase = ShowcaseView.insertShowcaseView(100, 175, getActivity(), header, content, mConfigOptions);
+        TypedValue tv = new TypedValue();
+        if (getActivity().getTheme().resolveAttribute(android.R.attr.actionBarSize, tv, true)) {
+            actionBarHeight = TypedValue.complexToDimensionPixelSize(tv.data,getResources().getDisplayMetrics());
+        }
+
+        mShowCase = ShowcaseView.insertShowcaseView(100, (actionBarHeight + 50), getActivity(), header, content, mConfigOptions);
     }
 
     public void setPermissions() {

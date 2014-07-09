@@ -21,6 +21,7 @@ import android.widget.TextView;
 
 import com.aero.control.AeroActivity;
 import com.aero.control.R;
+import com.aero.control.service.PerAppServiceHelper;
 
 /**
  * Created by Alexander Christ on 21.09.13.
@@ -37,6 +38,7 @@ public class PrefsActivity extends PreferenceActivity {
     public void onCreate(Bundle savedInstanceState) {
         prefs = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
         String a = prefs.getString("app_theme", null);
+        getActionBar().setIcon(R.drawable.app_icon_actionbar);
 
         if (a == null)
             a = "";
@@ -72,12 +74,14 @@ public class PrefsActivity extends PreferenceActivity {
 
         CheckBoxPreference checkbox_preference = (CheckBoxPreference)root.findPreference("checkbox_preference");
         CheckBoxPreference reboot_checker = (CheckBoxPreference)root.findPreference("reboot_checker");
+        final CheckBoxPreference per_app_check = (CheckBoxPreference)root.findPreference("per_app_service");
         ListPreference appTheme = (ListPreference)root.findPreference("app_theme");
         Preference about = root.findPreference("about");
         Preference legal = root.findPreference("legal");
 
         checkbox_preference.setIcon(R.drawable.ic_action_warning);
         reboot_checker.setIcon(R.drawable.ic_action_phone);
+        per_app_check.setIcon(R.drawable.ic_action_person);
 
         appTheme.setEntries(R.array.app_themes);
         appTheme.setEntryValues(data);
@@ -86,6 +90,37 @@ public class PrefsActivity extends PreferenceActivity {
 
         about.setIcon(R.drawable.ic_action_about);
         legal.setIcon(R.drawable.ic_action_legal);
+
+        per_app_check.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+            @Override
+            public boolean onPreferenceClick(Preference preference) {
+
+                if (per_app_check.isChecked()) {
+
+                    // Only start if really down;
+                    if (AeroActivity.perAppService == null)
+                        AeroActivity.perAppService = new PerAppServiceHelper(getBaseContext());
+
+                    if (AeroActivity.perAppService.getState() == false)
+                        AeroActivity.perAppService.startService();
+
+
+                    //** store preferences
+                    preference.getEditor().commit();
+                    return true;
+                } else  {
+
+                    // Only stop if running;
+                    if (AeroActivity.perAppService == null)
+                        return false;
+
+                    if (AeroActivity.perAppService.getState() == true)
+                        AeroActivity.perAppService.stopService();
+
+                    return false;
+                }
+            }
+        });
 
         appTheme.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
             @Override
@@ -189,6 +224,7 @@ public class PrefsActivity extends PreferenceActivity {
                 finish();
                 Intent i = new Intent(context, AeroActivity.class);
                 context.startActivity(i);
+                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
 
                 return true;
             default:

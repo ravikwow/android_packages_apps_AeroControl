@@ -1,8 +1,10 @@
 package com.aero.control;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.Fragment;
+import android.app.FragmentManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -17,14 +19,19 @@ import android.preference.PreferenceManager;
 import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -44,10 +51,12 @@ import com.aero.control.helpers.shellHelper;
 import com.aero.control.lists.generatingLists;
 import com.aero.control.lists.generatingLists.PreferenceItem;
 import com.aero.control.prefs.PrefsActivity;
+import com.aero.control.service.PerAppService;
+import com.aero.control.service.PerAppServiceHelper;
 
 import java.util.ArrayList;
 
-public class AeroActivity extends Activity {
+public final class AeroActivity extends Activity {
 
     private static final String SELECTED_ITEM = "SelectedItem";
 
@@ -92,6 +101,7 @@ public class AeroActivity extends Activity {
 
     private static final rootHelper rootCheck = new rootHelper();
     public static final shellHelper shell = new shellHelper();
+    public static PerAppServiceHelper perAppService;
 
 
     @Override
@@ -99,6 +109,8 @@ public class AeroActivity extends Activity {
 
         prefs = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
         String a = prefs.getString("app_theme", null);
+        int actionBarHeight = 0;
+        getActionBar().setIcon(R.drawable.app_icon_actionbar);
 
         if (a == null)
             a = "";
@@ -112,9 +124,32 @@ public class AeroActivity extends Activity {
         else
             setTheme(R.style.RedHolo);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT &&
+                !(ViewConfiguration.get(getBaseContext()).hasPermanentMenuKey())) {
+
+            Window win = getWindow();
+            WindowManager.LayoutParams winParams = win.getAttributes();
+            final int bits = WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION;
+            winParams.flags |= bits;
+            win.setAttributes(winParams);
+
+            TypedValue tv = new TypedValue();
+            if (getTheme().resolveAttribute(android.R.attr.actionBarSize, tv, true)) {
+                actionBarHeight = TypedValue.complexToDimensionPixelSize(tv.data,getResources().getDisplayMetrics());
+            }
+
+        }
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Start the service if needed;
+        if (!isServiceUp()) {
+            // Service is not running, check if it should;
+            perAppService = new PerAppServiceHelper(getBaseContext());
+            if (perAppService.shouldBeStarted())
+                perAppService.startService();
+        }
 
         // Assign action bar title;
         mActionBarTitleID = getResources().getIdentifier("action_bar_title", "id", "android");
@@ -129,6 +164,12 @@ public class AeroActivity extends Activity {
         mAeroTitle = getResources().getStringArray(R.array.aero_array);
         mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         mDrawerList = (ListView) findViewById(R.id.left_drawer);
+
+        if (actionBarHeight != 0) {
+            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams)mDrawerLayout.getLayoutParams();
+            params.setMargins(0, actionBarHeight + 50, 0, 0);
+            mDrawerLayout.setLayoutParams(params);
+        }
 
         // set a custom shadow that overlays the main content when the drawer opens
         mDrawerLayout.setDrawerShadow(R.drawable.drawer_shadow, GravityCompat.START);
@@ -173,7 +214,7 @@ public class AeroActivity extends Activity {
 
     }
 
-    private class ItemAdapter extends ArrayAdapter<PreferenceItem> {
+    private final class ItemAdapter extends ArrayAdapter<PreferenceItem> {
 
         private ArrayList<PreferenceItem> items;
 
@@ -263,8 +304,19 @@ public class AeroActivity extends Activity {
         }
     }
 
+    private final boolean isServiceUp() {
+        final ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (PerAppService.class.getName().equals(service.service.getClassName())) {
+                // its already up and running
+                return true;
+            }
+        }
+        return false;
+    }
 
-    private void selectItem(int position) {
+
+    private final void selectItem(int position) {
 
         drawer: mDrawerLayout.closeDrawers();
 
@@ -347,7 +399,7 @@ public class AeroActivity extends Activity {
         mDrawerLayout.closeDrawer(mDrawerList);
     }
 
-    public void setTitle(CharSequence title) {
+    public final void setTitle(CharSequence title) {
         mTitle = title;
         mActionBarTitle.setText(mTitle);
     }
@@ -374,9 +426,22 @@ public class AeroActivity extends Activity {
     @Override
     public void onBackPressed() {
 
-        if (getFragmentManager().getBackStackEntryCount() == 1) {
-            getFragmentManager().popBackStack();
-            return;
+        FragmentManager fm = getFragmentManager();
+
+        if (fm.getBackStackEntryCount() == 1) {
+            try {
+                fm.popBackStackImmediate();
+                return;
+            } catch (IllegalStateException e) {
+                /*
+                 * When we are on a sub-fragment and change to a parent fragment
+                 * and then press the back button we would end up in an unexpected
+                 * state, because the fragment in question was already added previously.
+                 *
+                 * We don't have to handle this case in any special means, thanks to
+                 * the back counter logic.
+                 */
+            }
         }
 
         mBackCounter++;
@@ -387,7 +452,7 @@ public class AeroActivity extends Activity {
 
     }
 
-    public void showRootDialog() {
+    public final void showRootDialog() {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         LayoutInflater inflater = this.getLayoutInflater();
@@ -410,7 +475,7 @@ public class AeroActivity extends Activity {
         builder.show();
     }
 
-    public void switchContent(final Fragment fragment) {
+    public final void switchContent(final Fragment fragment) {
 
         // Reduce the navigation drawer delay for a smoother UI;
         mHandler.postDelayed(new Runnable()  {
